@@ -82,6 +82,16 @@ def test_inline():
     assert parse_inline(r'[tex:-3 \times -2 = +6]') == r'<span class="tex">\(-3 \times -2 = +6\)</span>'
     assert parse_inline(r'[tex:-3 \times -2 = +6[\]]') == r'<span class="tex">\(-3 \times -2 = +6[]\)</span>'
 
+def test_more():
+    assert parse('aaa\nbbb\n=====\nccc\nddd') == main.MORE_TAG.replace('\n', '') % ('aaabbb', 'cccddd')
+    assert parse('aaa\nbbb\n====\nccc\nddd') == 'aaabbb====cccddd'
+
+def test_break():
+    assert parse('aaa\n\nbbb') == '<p>aaa</p><p>bbb</p>'
+    assert parse('aaa\n\nbbb\n\nccc\n') == '<p>aaa</p><p>bbb</p><p>ccc</p>'
+    assert parse('aaa\n\nbbb\n=====\nccc\n') == main.MORE_TAG.replace('\n', '') % ('<p>aaa</p><p>bbb</p>', '<p>ccc</p>')
+    assert parse('aaa\n\nbbb\n=====\nccc\n') == main.MORE_TAG.replace('\n', '') % ('<p>aaa</p><p>bbb</p>', '<p>ccc</p>')
+
 
 # def test_mix():
 #     assert parse('-li\n++li') == '<ul><li>li</li></ul><ol><li>+li</li></ol>'

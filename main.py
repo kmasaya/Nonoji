@@ -7,6 +7,33 @@ IMAGE_LOCAL_URL = '/media/entry/'
 AMAZON_ASSOCIATE_TAG = 'w32-22'
 AMAZON_TAG = '<iframe src="http://rcm-fe.amazon-adsystem.com/e/cm?lt1=_blank&bc1=000000&IS2=1&bg1=FFFFFF&fc1=000000&lc1=0000FF&t={1}&o=9&p=8&l=as4&m=amazon&f=ifr&ref=ss_til&asins={0}" style="width:120px;height:240px;" scrolling="no" marginwidth="0" marginheight="0" frameborder="0"></iframe>'
 YOUTUBE_TAG = '<iframe width="420" height="315" src="https://www.youtube.com/embed/{0}" frameborder="0" allowfullscreen></iframe>'
+MORE_TAG = '''
+<div class="summary">
+%s
+</div>
+<div class="more">
+%s
+</div>
+'''
+# MORE_TAG = '''
+# <div class="summary">
+# %s
+# </div>
+# <div class="cm">
+# <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+# <!-- jp.w32 記事中 -->
+# <ins class="adsbygoogle"
+# style="display:inline-block;width:300px;height:250px"
+# data-ad-client="ca-pub-6392284552603348"
+# data-ad-slot="6848729146"></ins>
+# <script>
+# (adsbygoogle = window.adsbygoogle || []).push({});
+# </script>
+# </div>
+# <div class="more">
+# %s
+# </div>
+# '''
 
 INLINES = [
     {
@@ -194,6 +221,14 @@ def parse_block(text, replaces, name, re_str, re_sub_str, call):
 
         replaces.append((match_string, tag))
 
+def parse_more(text, name, re_str, call):
+    if re.search(re_str, text, re.MULTILINE) is not None:
+        summary, more = re.split(re_str, text, 1, re.MULTILINE)
+        return MORE_TAG % (summary, more)
+    else:
+        return text
+
+
 
 LINES = [
     {
@@ -273,21 +308,54 @@ LINES = [
         're_sub_str': r'^(.*)$',
         'call': parse_block
     },
+]
 
-    # ====
-    # =====
-    # return
-    # ><><
+MORES = [
+    {
+        'name': 'more',
+        're_str': r'^=====$\n',
+        'call': parse_more
+    }
+]
+
+def parse_break(text, name, re_str, call):
+    replaces = []
+    for match in re.finditer(re_str, text, re.MULTILINE):
+        print('-------------')
+        match_string = match.groups()[0]
+        print(match.groups())
+        tag = '<p>{0}</p>\n\n'.format(match_string)
+        replaces.append((match_string, tag))
+
+    print(replaces)
+    for replace in replaces:
+        text = text.replace(replace[0], replace[1])
+
+    return text
+
+
+BREAKS = [
+    {
+        'name': 'break',
+        're_str': r'((^[^<].*$\n)+?^$\n)',
+        'call': parse_break
+    }
 ]
 
 def parse(text):
     # XXX
-    text += '\n'
+    text = '{0}\n\n'.format(text).replace('=====', '\n=====\n')
     replaces = []
     for line in LINES:
         line['call'](text, replaces, **line)
 
     for replace in replaces:
         text = text.replace(replace[0], replace[1])
+
+    for break_point in BREAKS:
+        text = break_point['call'](text, **break_point)
+
+    for more in MORES:
+        text = more['call'](text, **more)
 
     return text
