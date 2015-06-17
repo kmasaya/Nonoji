@@ -2,28 +2,29 @@
 
 import re
 
+IMAGE_LOCAL_URL = '/media/entry/'
+
+AMAZON_ASSOCIATE_TAG = 'w32-22'
+AMAZON_TAG = '<iframe src="http://rcm-fe.amazon-adsystem.com/e/cm?lt1=_blank&bc1=000000&IS2=1&bg1=FFFFFF&fc1=000000&lc1=0000FF&t={1}&o=9&p=8&l=as4&m=amazon&f=ifr&ref=ss_til&asins={0}" style="width:120px;height:240px;" scrolling="no" marginwidth="0" marginheight="0" frameborder="0"></iframe>'
+YOUTUBE_TAG = '<iframe width="420" height="315" src="https://www.youtube.com/embed/{0}" frameborder="0" allowfullscreen></iframe>'
 
 INLINES = [
-    # {
-    #     'name': 'tex',
-    #     're_str': r'([tex\:(.+?)])',
-    # },
+    {
+        'name': 'tex',
+        're_str': r'(\[tex\:(.+?[^\\])\])',
+    },
     {
         'name': 'mailto',
         're_str': r'(\[mailto\:([^\:]*)(?:\:title=([^\]]+))*\])',
     },
-    # {
-    #     'name': 'youtube',
-    #     're_str': r'([youtube:(.+?)])',
-    # },
-    # {
-    #     'name': 'amazon',
-    #     're_str': r'([amazon:(.+?)])',
-    # },
-    # {
-    #     'name': 'twitter',
-    #     're_str': r'([twitter:(.+?)])',
-    # },
+    {
+        'name': 'youtube',
+        're_str': r'(\[youtube\:(.+?)\])',
+    },
+    {
+        'name': 'asin',
+        're_str': r'(\[asin\:(.+?)\])',
+    },
     {
         'name': 'link',
         're_str': r'(\[(http\://[^\:]*)(?:\:title=([^\]]+))*\])',
@@ -45,7 +46,6 @@ INLINES = [
 def parse_inline(line):
     for inline in INLINES:
         for match in re.finditer(inline['re_str'], line):
-            print(match.groups())
             match_string = match.groups()[0]
             if inline['name'] == 'link':
                 url = match.groups()[1]
@@ -66,10 +66,18 @@ def parse_inline(line):
                     tag = '<img src="{0}">'.format(image_url)
                 else:
                     # XXX 画像をどうとるか
-                    tag = '<img src="/media/entry/{0}">'.format(image_id)
+                    tag = '<img src="{0}{1}">'.format(IMAGE_LOCAL_URL, image_id)
+            elif inline['name'] == 'asin':
+                asin_id = match.groups()[1]
+                tag = AMAZON_TAG.format(asin_id, AMAZON_ASSOCIATE_TAG)
+            elif inline['name'] == 'youtube':
+                youtube_id = match.groups()[1]
+                tag = YOUTUBE_TAG.format(youtube_id)
+            elif inline['name'] == 'tex':
+                tex = match.groups()[1]
+                tag = r'<span class="tex">\({0}\)</span>'.format(tex).replace(r'\]', ']')
 
             line = line.replace(match_string, tag)
-
     return line
 
 def parse_h(text, replaces, name, re_str, call):
@@ -80,8 +88,10 @@ def parse_h(text, replaces, name, re_str, call):
         if find_star >= 1 and element.find(' ', 0, find_star):
             id_attr = element[:find_star]
             element = element[find_star+1:]
+            element = parse_inline(element)
             tag = '<{0} id="{1}">{2}</{0}>'.format(name, id_attr, element.strip())
         else:
+            element = parse_inline(element)
             tag = '<{0}>{1}</{0}>'.format(name, element.strip())
 
         replaces.append((match_string, tag))
@@ -91,7 +101,9 @@ def parse_li(text, replaces, name, re_str, re_sub_str, call):
         match_string = match.groups()[0]
         tag = ''
         for sub_match in re.finditer(re_sub_str, match_string, re.MULTILINE):
-            tag += '<li>{0}</li>'.format(sub_match.groups()[0].strip())
+            element = sub_match.groups()[0]
+            element = parse_inline(element)
+            tag += '<li>{0}</li>'.format(element.strip())
         tag = '<{0}>{1}</{0}>'.format(name, tag)
 
         replaces.append((match_string, tag))
@@ -99,12 +111,13 @@ def parse_li(text, replaces, name, re_str, re_sub_str, call):
 def parse_dl(text, replaces, name, re_str, re_sub_str, call):
     for match in re.finditer(re_str, text, re.MULTILINE):
         match_string = match.groups()[0]
-        print(match_string)
-
         tag = ''
         for sub_match in re.finditer(re_sub_str, match_string, re.MULTILINE):
-            print(sub_match.groups())
-            tag += '<dt>{0}</dt><dd>{1}</dd>'.format(sub_match.groups()[0].strip(), sub_match.groups()[1].strip())
+            dt_element = sub_match.groups()[0].strip()
+            dt_element = parse_inline(dt_element)
+            dd_element = sub_match.groups()[1].strip()
+            dd_element = parse_inline(dd_element)
+            tag += '<dt>{0}</dt><dd>{1}</dd>'.format(dt_element, dd_element)
         tag = '<{0}>{1}</{0}>'.format(name, tag)
 
         replaces.append((match_string, tag))
@@ -130,7 +143,8 @@ def parse_table(text, replaces, name, re_str, call):
                     cell = cell[1:]
                 else:
                     cell_type = 'td'
-                line_tag += '<{0}>{1}</{0}>'.format(cell_type, cell.strip())
+                cell = parse_inline(cell.strip())
+                line_tag += '<{0}>{1}</{0}>'.format(cell_type, cell)
             tag += '<tr>{0}</tr>'.format(line_tag)
         tag = '<{0}>{1}</{0}>'.format(name, tag)
 
@@ -138,9 +152,7 @@ def parse_table(text, replaces, name, re_str, call):
 
 def parse_blockquote(text, replaces, name, re_str, re_sub_str, call):
     for match in re.finditer(re_str, text, re.MULTILINE):
-        print(match.groups())
         match_string = match.groups()[0]
-        # XXX http記法
         cite = match.groups()[1]
 
         lines = []
@@ -150,16 +162,16 @@ def parse_blockquote(text, replaces, name, re_str, re_sub_str, call):
                 lines.append(line)
 
         element = '\n'.join(lines)
+        element = parse_inline(element.strip())
         if cite != '':
-            tag = '<{0} cite="{2}">{1}</{0}>'.format(name, element.strip(), cite)
+            tag = '<{0} cite="{2}">{1}</{0}>'.format(name, element, cite)
         else:
-            tag = '<{0}>{1}</{0}>'.format(name, element.strip())
+            tag = '<{0}>{1}</{0}>'.format(name, element)
 
         replaces.append((match_string, tag))
 
 def parse_block(text, replaces, name, re_str, re_sub_str, call):
     for match in re.finditer(re_str, text, re.MULTILINE):
-        print(match.groups())
         match_string = match.groups()[0]
         block_type = match.groups()[1]
 
@@ -170,7 +182,9 @@ def parse_block(text, replaces, name, re_str, re_sub_str, call):
                 lines.append(line)
 
         element = '\n'.join(lines)
+
         if block_type == '':
+            element = parse_inline(element)
             tag = '<{0}>{1}</{0}>'.format(name, element)
         else:
             if block_type == '?':

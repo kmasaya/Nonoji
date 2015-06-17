@@ -81,15 +81,5 @@ http記法のURLの後ろに「title=」で始まる行があれば、次の「:
 「youtube:\*」、「niconico:sm\*」に対応しています
 
 
-* [amazon:id] Associate記法
+* [asin:id] Amazon Associate記法
 Amazonアソシエイトタグを挿入します
-
-* [twitter:id] Twitter記法
-Twitterを埋め込みます
-
-
-
-
-
-
-* 見出し、リストの解除
