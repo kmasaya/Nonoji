@@ -108,7 +108,7 @@ def parse_inline(line):
     return line
 
 def parse_h(text, replaces, name, re_str, call):
-    for match in re.finditer(re_str, text):
+    for match in re.finditer(re_str, text, re.MULTILINE):
         match_string = match.string
         element = match.groups()[0]
         find_star = element.find('*')
@@ -321,13 +321,16 @@ MORES = [
 def parse_break(text, name, re_str, call):
     replaces = []
     for match in re.finditer(re_str, text, re.MULTILINE):
-        print('-------------')
         match_string = match.groups()[0]
-        print(match.groups())
-        tag = '<p>{0}</p>\n\n'.format(match_string)
+        element = match.groups()[1]
+        more = match.groups()[2]
+        if more is None:
+            tag = '<p>\n{0}</p>\n\n'.format(element)
+        else:
+            tag = '<p>\n{0}</p>\n=====\n\n'.format(element)
+
         replaces.append((match_string, tag))
 
-    print(replaces)
     for replace in replaces:
         text = text.replace(replace[0], replace[1])
 
@@ -337,14 +340,36 @@ def parse_break(text, name, re_str, call):
 BREAKS = [
     {
         'name': 'break',
-        're_str': r'((^[^<].*$\n)+?^$\n)',
+        're_str': r'(((?:^(?!=====$\n)[^<].*$\n)+?)(?:(^=====$\n)|^$\n))',
         'call': parse_break
     }
 ]
 
+
+def _test_parse(text):
+    text = '{0}\n\n'.format(text)
+    replaces = []
+    for line in LINES:
+        line['call'](text, replaces, **line)
+    for replace in replaces:
+        text = text.replace(replace[0], replace[1])
+
+    return text
+
+def _test_break(text):
+    text = _test_parse(text)
+
+    for break_point in BREAKS:
+        text = break_point['call'](text, **break_point)
+
+    for more in MORES:
+        text = more['call'](text, **more)
+
+    return text
+
 def parse(text):
     # XXX
-    text = '{0}\n\n'.format(text).replace('=====', '\n=====\n')
+    text = '{0}\n\n'.format(text)
     replaces = []
     for line in LINES:
         line['call'](text, replaces, **line)
