@@ -320,12 +320,7 @@ MORES = [
 
 def parse_break(text, name, re_str, call):
     replaces = []
-    print('===========---')
-    print(text)
-    print('-0-0-0-0')
     for match in re.finditer(re_str, text, re.MULTILINE):
-        print('INININININ')
-        print(match.group())
         match_string = match.groups()[0]
         element = match.groups()[1]
         if len(match.groups()) < 3:
@@ -359,7 +354,6 @@ def _test_parse(text):
     replaces = []
     for line in LINES:
         line['call'](text, replaces, **line)
-    print(replaces)
     for replace in replaces:
         text = text.replace(replace[0], replace[1]+'\n')
 
