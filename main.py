@@ -109,8 +109,8 @@ def parse_inline(line):
 
 def parse_h(text, replaces, name, re_str, call):
     for match in re.finditer(re_str, text, re.MULTILINE):
-        match_string = match.string
-        element = match.groups()[0]
+        match_string = match.groups()[0]
+        element = match.groups()[1]
         find_star = element.find('*')
         if find_star >= 1 and element.find(' ', 0, find_star):
             id_attr = element[:find_star]
@@ -233,32 +233,32 @@ def parse_more(text, name, re_str, call):
 LINES = [
     {
         'name': 'h1',
-        're_str': r'^\*([^\*].*)$',
+        're_str': r'^(\*([^\*].*)$)',
         'call': parse_h,
     },
     {
         'name': 'h2',
-        're_str': r'^\*\*([^\*].*)$',
+        're_str': r'^(\*\*([^\*].*)$)',
         'call': parse_h,
     },
     {
         'name': 'h3',
-        're_str': r'^\*\*\*([^\*].*)$',
+        're_str': r'^(\*\*\*([^\*].*)$)',
         'call': parse_h,
     },
     {
         'name': 'h4',
-        're_str': r'^\*\*\*\*([^\*].*)$',
+        're_str': r'^(\*\*\*\*([^\*].*)$)',
         'call': parse_h,
     },
     {
         'name': 'h5',
-        're_str': r'^\*\*\*\*\*([^\*].*)$',
+        're_str': r'^(\*\*\*\*\*([^\*].*)$)',
         'call': parse_h,
     },
     {
         'name': 'h6',
-        're_str': r'^\*\*\*\*\*\*([^\*].*)$',
+        're_str': r'^(\*\*\*\*\*\*([^\*].*)$)',
         'call': parse_h,
     },
 
@@ -351,8 +351,9 @@ def _test_parse(text):
     replaces = []
     for line in LINES:
         line['call'](text, replaces, **line)
+    print(replaces)
     for replace in replaces:
-        text = text.replace(replace[0], replace[1])
+        text = text.replace(replace[0], replace[1]+'\n\n')
 
     return text
 

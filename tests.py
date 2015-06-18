@@ -96,8 +96,10 @@ def test_break():
     assert parse_break('aaa\n\nbbb\n\n=====\n\nccc\n') == main.MORE_TAG.replace('\n', '') % ('<p>aaa</p><p>bbb</p>', '<p>ccc</p>')
 
 
-# def test_mix():
-#     assert parse('-li\n++li') == '<ul><li>li</li></ul><ol><li>+li</li></ol>'
+def test_mix():
+    assert parse_line('-li\n++li') == '<ul><li>li</li></ul><ol><li>+li</li></ol>'
+    assert parse_line('-li\n*1\naaa\n++li') == '<ul><li>li</li></ul><h1>1</h1>aaa<ol><li>+li</li></ol>'
+    assert parse_break('-li\n*1\naaa\n++li') == '<ul><li>li</li></ul><h1>1</h1><p>aaa</p><ol><li>+li</li></ol>'
 
 
 if __name__ == '__main__':
