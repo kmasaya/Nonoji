@@ -100,6 +100,9 @@ def test_mix():
     assert parse_line('-li\n++li') == '<ul><li>li</li></ul><ol><li>+li</li></ol>'
     assert parse_line('-li\n*1\naaa\n++li') == '<ul><li>li</li></ul><h1>1</h1>aaa<ol><li>+li</li></ol>'
     assert parse_break('-li\n*1\naaa\n++li') == '<ul><li>li</li></ul><h1>1</h1><p>aaa</p><ol><li>+li</li></ol>'
+    assert parse_break('-li\n*1\n<span>aaa</span>\n++li') == '<ul><li>li</li></ul><h1>1</h1><span>aaa</span><ol><li>+li</li></ol>'
+    assert parse_break('-li\n*1\n <span>aaa</span>\n++li') == '<ul><li>li</li></ul><h1>1</h1><p> <span>aaa</span></p><ol><li>+li</li></ol>'
+    assert parse_break('-li\n*1\n <span>aaa</span>\n=====\n++li') == main.MORE_TAG.replace('\n', '') % ('<ul><li>li</li></ul><h1>1</h1><p> <span>aaa</span></p>','<ol><li>+li</li></ol>')
 
 
 if __name__ == '__main__':
