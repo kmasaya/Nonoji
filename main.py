@@ -322,15 +322,8 @@ def parse_break(text, name, re_str, call):
     replaces = []
     for match in re.finditer(re_str, text, re.MULTILINE):
         match_string = match.groups()[0]
-        element = match.groups()[1]
-        if len(match.groups()) < 3:
-            more = None
-        else:
-            more = match.groups()[2]
-        if more is None:
-            tag = '<p>\n{0}</p>\n\n'.format(element)
-        else:
-            tag = '<p>\n{0}</p>\n=====\n\n'.format(element)
+        element = match.groups()[0]
+        tag = '<p>\n{0}</p>\n\n'.format(element)
 
         replaces.append((match_string, tag))
 
@@ -343,7 +336,7 @@ def parse_break(text, name, re_str, call):
 BREAKS = [
     {
         'name': 'break',
-        're_str': r'(((?:^(?!$\n)(?!=====$\n)[^<].*$\n)+))',
+        're_str': r'((?:^(?!$\n)(?!=====$\n)[^<].*$\n)+)',
         'call': parse_break
     }
 ]
