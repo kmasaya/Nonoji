@@ -54,6 +54,7 @@ def test_blockquote():
     assert parse_line('>>\naaa\n<<\n') == '<blockquote>aaa</blockquote>'
     assert parse_line('>>\naaa\nbbb\n<<\n') == '<blockquote>aaabbb</blockquote>'
     assert parse_line('>http://example.jp/>\n[http://example.jp/]\n<<\n') == '<blockquote cite="http://example.jp/"><a href="http://example.jp/">http://example.jp/</a></blockquote>'
+    assert parse_break('>>\naaa\nbbb\n\nccc\n<<\n') == '<blockquote>aaabbbccc</blockquote>'
 
 def test_block():
     assert parse_line('>|aaa|<\n') == '>|aaa|<'
@@ -86,10 +87,11 @@ def test_inline():
     assert parse_inline(r'[tex:-3 \times -2 = +6[\]]') == r'<span class="tex">\(-3 \times -2 = +6[]\)</span>'
 
 def test_more():
-    assert parse_break('aaa\nbbb\n=====\nccc\nddd') == main.MORE_TAG.replace('\n', '') % ('<p>aaabbb</p>', '<p>cccddd</p>')
-    assert parse_break('aaa\nbbb\n====\nccc\nddd') == '<p>aaabbb====cccddd</p>'
+    assert parse_break('aaa\nbbb\n=====\nccc\nddd') == main.MORE_TAG.replace('\n', '') % ('<p>aaa<br>bbb</p>', '<p>ccc<br>ddd</p>')
+    assert parse_break('aaa\nbbb\n====\nccc\nddd') == '<p>aaa<br>bbb<br>====<br>ccc<br>ddd</p>'
 
 def test_break():
+    assert parse_break('aaa\nbbb') == '<p>aaa<br>bbb</p>'
     assert parse_break('aaa\n\nbbb') == '<p>aaa</p><p>bbb</p>'
     assert parse_break('aaa\n\nbbb\n\nccc\n') == '<p>aaa</p><p>bbb</p><p>ccc</p>'
     assert parse_break('aaa\n\nbbb\n=====\nccc\n') == main.MORE_TAG.replace('\n', '') % ('<p>aaa</p><p>bbb</p>', '<p>ccc</p>')
@@ -101,8 +103,8 @@ def test_mix():
     assert parse_line('-li\n*1\naaa\n++li') == '<ul><li>li</li></ul><h1>1</h1>aaa<ol><li>+li</li></ol>'
     assert parse_break('-li\n*1\naaa\n++li') == '<ul><li>li</li></ul><h1>1</h1><p>aaa</p><ol><li>+li</li></ol>'
     assert parse_break('-li\n*1\n<span>aaa</span>\n++li') == '<ul><li>li</li></ul><h1>1</h1><span>aaa</span><ol><li>+li</li></ol>'
-    assert parse_break('-li\n*1\n <span>aaa</span>\n++li') == '<ul><li>li</li></ul><h1>1</h1><p> <span>aaa</span></p><ol><li>+li</li></ol>'
-    assert parse_break('-li\n*1\n <span>aaa</span>\n=====\n++li') == main.MORE_TAG.replace('\n', '') % ('<ul><li>li</li></ul><h1>1</h1><p> <span>aaa</span></p>','<ol><li>+li</li></ol>')
+    assert parse_break('-li\n*1\n <span>aaa</span>\n++li') == '<ul><li>li</li></ul><h1>1</h1><p><span>aaa</span></p><ol><li>+li</li></ol>'
+    assert parse_break('-li\n*1\n <span>aaa</span>\n=====\n++li') == main.MORE_TAG.replace('\n', '') % ('<ul><li>li</li></ul><h1>1</h1><p><span>aaa</span></p>','<ol><li>+li</li></ol>')
 
 
 if __name__ == '__main__':
