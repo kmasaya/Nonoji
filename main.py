@@ -130,8 +130,8 @@ def parse_li(text, replaces, name, re_str, re_sub_str, call):
         for sub_match in re.finditer(re_sub_str, match_string, re.MULTILINE):
             element = sub_match.groups()[0]
             element = parse_inline(element)
-            tag += '<li>{0}</li>'.format(element.strip())
-        tag = '<{0}>{1}</{0}>\n\n'.format(name, tag)
+            tag += '<li>{0}</li>\n'.format(element.strip())
+        tag = '<{0}>\n{1}</{0}>\n\n'.format(name, tag)
 
         replaces.append((match_string, tag))
 
@@ -144,8 +144,8 @@ def parse_dl(text, replaces, name, re_str, re_sub_str, call):
             dt_element = parse_inline(dt_element)
             dd_element = sub_match.groups()[1].strip()
             dd_element = parse_inline(dd_element)
-            tag += '<dt>{0}</dt><dd>{1}</dd>'.format(dt_element, dd_element)
-        tag = '<{0}>{1}</{0}>\n\n'.format(name, tag)
+            tag += '<dt>{0}</dt><dd>{1}</dd>\n'.format(dt_element, dd_element)
+        tag = '<{0}>\n{1}</{0}>\n\n'.format(name, tag)
 
         replaces.append((match_string, tag))
 
@@ -171,8 +171,8 @@ def parse_table(text, replaces, name, re_str, call):
                 else:
                     cell_type = 'td'
                 cell = parse_inline(cell.strip())
-                line_tag += '<{0}>{1}</{0}>'.format(cell_type, cell)
-            tag += '<tr>{0}</tr>\n'.format(line_tag)
+                line_tag += '<{0}>{1}</{0}>\n'.format(cell_type, cell)
+            tag += '<tr>\n{0}</tr>\n'.format(line_tag)
         tag = '<{0}>\n{1}</{0}>\n\n'.format(name, tag)
 
         replaces.append((match_string, tag))
@@ -185,39 +185,44 @@ def parse_blockquote(text, replaces, name, re_str, re_sub_str, call):
         lines = []
         for i, sub_match in enumerate(re.finditer(re_sub_str, match_string, re.MULTILINE)):
             line = sub_match.groups()[0]
-            if i != 0 and line != '<<' and line != '':
+            if i != 0 and line != '<<':
                 lines.append(line)
 
         element = '\n'.join(lines)
         element = parse_inline(element.strip())
         if cite != '':
-            tag = '<{0} cite="{2}">{1}</{0}>\n\n'.format(name, element, cite)
+            tag = '<{0} cite="{2}">\n{1}\n</{0}>\n\n'.format(name, element, cite)
         else:
-            tag = '<{0}>{1}</{0}>\n\n'.format(name, element)
+            tag = '<{0}>\n{1}\n</{0}>\n\n'.format(name, element)
 
         replaces.append((match_string, tag))
 
 def parse_block(text, replaces, name, re_str, re_sub_str, call):
     for match in re.finditer(re_str, text, re.MULTILINE):
         match_string = match.groups()[0]
-        block_type = match.groups()[1]
+        if len(match.groups()) > 1:
+            block_type = match.groups()[1]
+        else:
+            block_type = None
 
         lines = []
         for i, sub_match in enumerate(re.finditer(re_sub_str, match_string, re.MULTILINE)):
             line = sub_match.groups()[0]
-            if i != 0 and line != '|<' and line != '||<' and line != '':
+            if i != 0 and line != '|<' and line != '||<':
                 lines.append(line)
 
         element = '\n'.join(lines)
 
-        if block_type == '':
+        if block_type is None:
             element = parse_inline(element)
-            tag = '<{0}>{1}</{0}>\n\n'.format(name, element)
+            tag = '><\n<{0}>\n{1}</{0}>\n><\n\n'.format(name, element)
         else:
-            if block_type == '?':
-                tag = '<{0} class="prettyprint">{1}</{0}>\n\n'.format(name, element)
+            if block_type == '':
+                tag = '><\n<{0}>\n{1}</{0}>\n><\n\n'.format(name, element)
+            elif block_type == '?':
+                tag = '><\n<{0} class="prettyprint">\n{1}</{0}>\n><\n\n'.format(name, element)
             else:
-                tag = '<{0} class="prettyprint lang-{2}">{1}</{0}>\n\n'.format(name, element, block_type)
+                tag = '><\n<{0} class="prettyprint lang-{2}">\n{1}</{0}>\n><\n\n'.format(name, element, block_type)
 
         replaces.append((match_string, tag))
 
@@ -227,7 +232,6 @@ def parse_more(text, name, re_str, call):
         return MORE_TAG % (summary, more)
     else:
         return text
-
 
 
 LINES = [
@@ -297,7 +301,7 @@ LINES = [
     {
         # >| block
         'name': 'pre',
-        're_str': r'(^\>\|(.{0})$\n(^.*$\n)+?^\|\<$\n)',
+        're_str': r'(^\>\|$\n(?:^.*$\n)+?^\|\<$\n)',
         're_sub_str': r'^(.*)$',
         'call': parse_block
     },
@@ -320,6 +324,13 @@ MORES = [
 
 def parse_break(text, name, re_str, call):
     replaces = []
+    through_replaces = []
+    for match in re.finditer(BREAK_THROUGH[0]['re_str'], text, re.MULTILINE):
+        match_string = match.groups()[0]
+        escape_string = match_string.replace('\n', '')
+        through_replaces.append((match_string, escape_string))
+        text = text.replace(match_string, '<'+escape_string, 1)
+
     for match in re.finditer(re_str, text, re.MULTILINE):
         match_string = match.groups()[0]
         element = match.groups()[0].strip()
@@ -331,8 +342,18 @@ def parse_break(text, name, re_str, call):
     for replace in replaces:
         text = text.replace(replace[0], replace[1], 1)
 
-    return text
+    for through_replace in through_replaces:
+        text = text.replace('<'+through_replace[1], through_replace[0])
 
+    return re.sub(r'^\>\<$\n', '', text, 0, re.MULTILINE)
+
+
+BREAK_THROUGH = [
+    {
+        'name': 'break_throught',
+        're_str': r'(^\>\<$\n(?:^.*$\n)+^\>\<$\n)',
+    }
+]
 
 BREAKS = [
     {
