@@ -217,6 +217,7 @@ def parse_block(text, replaces, name, re_str, re_sub_str, call):
             element = parse_inline(element)
             tag = '><\n<{0}>\n{1}</{0}>\n><\n\n'.format(name, element)
         else:
+            element = element.replace('<', '&lt;').replace('>', '&gt;')
             if block_type == '':
                 tag = '><\n<{0}>\n{1}</{0}>\n><\n\n'.format(name, element)
             elif block_type == '?':
@@ -387,7 +388,7 @@ def _test_break(text):
 
 def parse(text):
     # XXX
-    text = '{0}\n\n'.format(text)
+    text = '{0}\n\n'.format(text.replace('\r\n', '\n').replace('\r', '\n'))
     replaces = []
     for line in LINES:
         line['call'](text, replaces, **line)
